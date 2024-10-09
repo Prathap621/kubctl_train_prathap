@@ -1,0 +1,1962 @@
+STANDARD LAB INSTRUCTIONS
+
+https://linuxlab.koenig-solutions.com/
+
+lab - VMWare Environment credentials
+
+CentOS Credentials
+student  student
+root  redhat
+
+ON ALL VM
+
+su -
+password - redhat
+yum update -y
+reboot 
+
+DOCKER
+
+Task 01 -  Docker installation
+
+wget -O /etc/yum.repos.d/docker.repo https://download.docker.com/linux/centos/docker-ce.repo              [OPTIONAL]
+
+yum install -y docker-ce
+systemctl enable docker.service --now
+systemctl status docker.service
+docker version
+docker system info
+
+Note - Sign up on Docker Hub registry using the below link
+https://hub.docker.com/signup
+
+docker login
+
+Task 02 -  Docker basic commands
+
+docker --help | less
+docker ps --help
+docker images
+docker run nginx
+
+Note
+- Open second tab in the same terminal window and execute docker ps
+- press Ctrl + c in first tab
+
+docker ps -a
+docker start <container-id>
+docker ps
+docker stop <container-id>
+docker ps -a
+docker rm <container-id>
+docker ps -a
+docker images
+docker run -d nginx
+docker ps
+docker rm -f <cont-id>
+docker ps -a
+docker rmi nginx
+docker images
+docker pull nginx
+docker run ubuntu
+docker images
+docker ps -a
+docker run ubuntu sleep 120
+
+docker run -t ubuntu
+pwd
+ls
+Note - execute below commands in second tab
+docker stop <cont-id>
+docker run -i ubuntu
+pwd
+ls /
+exit
+
+docker run -it ubuntu
+pwd
+exit
+
+Note: docker <docker-object> <sub-command> <options> <argument/commands>
+
+docker ps -qa
+docker rm -f $(docker ps -qa)
+docker ps -a
+docker run -itd --name=webapp ubuntu
+docker ps
+docker rename webapp webapp2
+docker ps
+docker exec <cont-id> hostname
+docker exec -it <cont-id> /bin/bash
+ps -ef
+exit
+
+docker inspect <cont-id> | less
+docker stats
+docker top <cont-id>
+docker logs <cont-id>
+docker logs -f <cont-id>
+docker system events --since 60m
+docker kill <cont-id>
+
+Task 03 -  Docker port forwarding
+
+docker run -d -p 5000:80 nginx
+docker ps
+docker inspect <cont-id> | less
+ip add
+ping -c3 <cont-IP>
+curl http://<host-IP>:5000
+curl http://<cont-IP>:80
+curl http://<cont-IP>:80
+curl http://<cont-IP>:80
+docker logs <cont-id>
+Note - execute below commands in second tab
+docker logs -f <cont-id>
+
+Task 04 -  Docker container filesystem persistence
+
+Note - remove the containers
+
+docker run -it ubuntu
+cp /etc/passwd /tmp/mypasswd
+ls /tmp
+cat /tmp/mypasswd
+exit
+docker ps -a
+docker start <cont-id>
+docker ps
+docker exec <cont-id> cat /tmp/mypasswd
+
+Task 05 -  Mapping Docker host directory to container filesystem
+
+mkdir /data
+docker run -it -v /data:/tmp --name c1 ubuntu
+cp /etc/passwd /tmp/mypasswd
+cat /tmp/mypasswd
+exit
+ls /data
+cat /data/mypasswd
+
+Task 06 -  Docker volume mapping
+
+cd /var/lib/docker/volumes
+docker volume ls
+docker volume create my-volume
+docker volume inspect my-volume
+docker run -it -v my-volume:/data --name my-container selaworkshops/busybox:latest
+cd /data
+echo "hello" > hello.txt
+ls
+exit
+docker run -it -v my-volume:/data --name my-container-2 selaworkshops/busybox:latest
+cd data
+ls
+exit
+docker rm -f my-container my-container-2
+
+Task 07 -  Docker networking
+
+docker network ls
+docker network create -d bridge mybr
+docker network ls
+docker run -d -p 8081:8081 -e "port=8081" --name app --network=mybr selaworkshops/python-app:2.0
+docker inspect app | less
+docker run -it --name client alpine:latest
+apk --no-cache add curl
+curl 172.18.0.2:8081 --connect-timeout 5
+ip add
+exit
+docker run -it --name client2 --network=mybr alpine:latest
+apk --no-cache add curl
+ip add
+curl 172.18.0.2:8081 --connect-timeout 5
+
+Task 08 -  Docker Images
+
+Example: 1
+
+pwd
+cd /
+mkdir -v image1
+cd image1/
+vim Dockerfile
+
+FROM ubuntu
+RUN apt-get update
+RUN apt-get -y install nginx
+OR
+RUN apt-get update && apt-get -y install nginx
+CMD ["nginx", "-g", "daemon off;"]
+
+cat Dockerfile 
+docker build .
+docker images
+docker container run -d -p 80:80 <image-ID>
+docker ps
+curl 127.0.0.1:80
+docker rm -f <container-ID> 
+cd /
+
+Example: 2
+
+pwd
+mkdir -v image2
+cd image2
+vim index.nginx-debian.html
+
+WELCOME TO KUBERNETES
+
+cat index.nginx-debian.html
+ls
+
+vim Dockerfile
+
+FROM ubuntu
+RUN apt-get update
+RUN apt-get install -y nginx
+COPY index.nginx-debian.html /var/www/html
+CMD nginx -g 'daemon off;'
+
+docker build .
+docker images
+docker run -d -p 8001:80 --name md
+docker ps
+curl 127.0.0.1:8001
+docker rm -f <container-ID>
+
+Example: 3
+
+cd /
+mkdir -v wordpress
+cd wordpress
+echo "file copied from remote machine" > add.txt
+echo "file copied from local nachine" > copy.txt
+ls
+vim Dockerfile 
+    
+FROM busybox
+COPY copy.txt /tmp
+ADD add.txt /tmp
+CMD ["sh"]
+    
+docker build -t demobusybox .
+docker images
+docker container run -dt --name demobusybox demobusybox
+docker ps
+docker container exec -it demobusybox sh
+ls /tmp
+exit
+docker rm -f <container-ID>
+
+Example: 4
+
+cd /
+mkdir -v wordpress2
+cd wordpress2
+vim Dockerfile
+    
+FROM busybox
+CMD ["sh"]
+
+docker build -t mybox .
+docker images
+docker container run -itd --name base01 mybox
+docker ps
+docker container run -itd --name base02 mybox ping -c5 google.com
+docker logs base02
+docker ps
+docker rm -f <container-ID>
+docker rm -f <container-ID>
+
+vim Dockerfile 
+
+FROM busybox
+ENTRYPOINT ["/bin/ping"]
+
+docker build -t mybox2 .
+docker images
+docker container run -itd --name base03 mybox2 cat /etc/passwd
+
+docker container run -itd --name base04 mybox2 -c5 google.com
+docker logs base04
+docker rm -f <container-ID>
+docker rm -f <container-ID>
+
+Example: 5
+
+cd /
+mkdir -v workdir
+cd workdir/
+vim Dockerfile
+
+FROM busybox
+RUN mkdir /root/demo && touch /root/demo/file01.txt
+WORKDIR /root/demo
+CMD ["/bin/sh"]
+
+docker build -t workdir-demo .
+docker run -dt --name workdir-demo workdir-demo sh
+docker ps
+docker exec -it workdir-demo sh
+pwd
+ls
+exit
+docker rm -f <container-ID>
+
+Example: 6
+
+pwd
+cd /
+mkdir -v image0
+cd image0/
+pwd
+vim Dockerfile
+
+FROM ubuntu
+RUN apt-get update
+RUN apt-get -y install nginx
+CMD ["nginx", "-g", "daemon off;"]
+
+cat Dockerfile 
+docker build -t myimg .
+docker images
+docker login
+NOTE - supply creds
+docker tag myimg <dockerhub-username>/<repo-name>:v1
+docker images
+docker push <dockerhub-username>/<repo-name>:v1
+docker rmi <dockerhub-username>/<repo-name>:v1
+docker rmi myimg
+docker images
+docker pull <dockerhub-username>/<repo-name>:v1
+docker images
+
+======================================================
+
+KUBERNETES
+
+TASK 01 - On-Premises Kubernetes Installation
+
+ON ALL THE VMs
+NOTE - TAKE SSH OF THE WORKER1 AND WORKER2 FROM MASTER MACHINE
+
+ssh root@IP-WORKER1 OR ssh root@IP-WORKER2
+yum update -y
+hostname
+hostname -i
+
+ON MASTER ONLY
+vim /etc/hosts
+
+<IP-master>   master
+<IP-worker1>   node1
+<IP-worker2>   node2
+
+cat /etc/hosts
+scp /etc/hosts root@node1:/etc/hosts
+scp /etc/hosts root@node2:/etc/hosts
+
+ON NODE1 ONLY
+cat /etc/hosts
+ping -c3 master
+
+ON NODE2 ONLY
+cat /etc/hosts
+ping -c3 master
+
+ON ALL THE VMs
+yum install crio kubectl kubelet kubeadm -y
+servicesystemctl enable --now crio. 
+systemctl status crio.service 
+systemctl daemon-reload
+
+ON MASTER ONLY
+kubeadm init --pod-network-cidr=10.244.0.0/16 --ignore-preflight-errors=all
+mkdir -p $HOME/.kube
+cp -i /etc/kubernetes/admin.conf $HOME/.kube/config
+ls -a
+ls -a .kube
+systemctl enable kubelet.service 
+systemctl status kubelet.service 
+kubectl get nodes
+
+ON NODE1 AND NODE2 ONLY
+kubeadm join <MSTER-IP>:6443 --token <RANDOM-ID> --discovery-token-ca-cert-hash sha256:<RANDOM-ID>
+
+Example for above command: 
+kubeadm join 172.25.230.79:6443 --token id6rkj.vhil4anj0xayl0lr -discovery-token-ca-cert-hash sha256:4f46959c0daa217d43c2d96e571289fcf5f4c5e1386b366420a4f1679355704a
+
+NOTE - refer text editor for the above command
+
+systemctl enable kubelet.service 
+systemctl status kubelet.service 
+
+ON MASTER ONLY
+
+CALICO INSTALLATION
+kubectl get nodes
+wget https://raw.githubusercontent.com/projectcalico/calico/v3.25.0/manifests/calico.yaml
+ls
+gedit calico.yaml 
+Note - press ctrl + h, in 'find' type docker.io, in 'replace with' type quay.io, click Replace All button and click Save button
+kubectl apply -f calico.yaml
+kubectl get pods -n kube-system | less
+
+INSTALLATION METAL-LB AND CONFIGURING IP ADDRESS POOL
+
+wget https://raw.githubusercontent.com/metallb/metallb/v0.13.7/config/manifests/metallb-native.yaml
+
+kubectl create -f metallb-native.yaml
+kubectl get pods -n metallb-system
+vim .vimrc
+
+set ai
+set ts=2
+set cursorcolumn
+
+vim ip-pool.yml
+
+apiVersion: metallb.io/v1beta1
+kind: IPAddressPool
+metadata:
+ name: first-pool
+ namespace: metallb-system
+spec:
+ addresses:
+ - 172.25.230.10 - 172.25.230.30
+ 
+kubectl create -f ip-pool.yml
+
+TASK 02 - BASIC COMMANDS
+ 
+kubectl get nodes
+[command] [action] [object]
+kubectl get nodes -o wide
+kubectl run nginx --image=quay.io/gauravkumar9130/mywebapp
+kubectl get pods
+kubectl get pods -o wide
+kubectl get pods -A | less
+kubectl exec -it nginx -- sh
+exit
+kubectl describe pod <pod-name> | less
+crictl ps
+NOTE - EXECUTE ABOVE COMMAND ON THE RESPECTIVE WORKER NODE
+kubectl describe node <node-name> | less
+kubectl explain pod | less
+
+TASK 03 - POD CREATION WITH MULTI-CONTAINERS
+
+mkdir -v mylabs
+cd mylabs
+pwd
+gedit multicon.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: multicon
+spec:
+ containers:
+ - name: cont1
+   image: quay.io/gauravkumar9130/mywebapp
+   imagePullPolicy: IfNotPresent
+ - name: cont2
+   image: redis
+   imagePullPolicy: IfNotPresent
+
+kubectl create -f multicon.yml 
+kubectl get pods -o wide
+kubectl exec -it multicon -- sh
+exit
+kubectl exec -it multicon -c cont2 -- sh
+exit
+kubectl delete -f multicon.yml 
+kubectl get pods -o wide
+kubectl debug node/<node-name> -it --image=mcr.microsoft.com/dotnet/runtime-deps:6.0
+ls
+cd host
+exit
+kubectl get pods -o wide
+kubectl delete pods --all
+
+TASK 04 - WORKING WITH LABELS AND SELECTORS
+
+gedit label.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: dev-pod
+ labels:
+  env: dev
+  manager: gaurav
+spec:
+ containers:
+ - name: abc
+   image: quay.io/gauravkumar9130/nginxdemo
+
+kubectl create -f label.yml 
+
+kubectl run dev-pod2 --image=quay.io/gauravkumar9130/mywebapp
+kubectl get pods --show-labels -o wide
+kubectl label pod dev-pod2 env=dev
+kubectl get pods --show-labels -o wide
+kubectl label pod dev-pod2 run-
+kubectl get pods --show-labels -o wide
+kubectl run dev-pod3 --image=quay.io/gauravkumar9130/mywebapp -l env=prod
+kubectl get pods --show-labels -o wide
+kubectl run dev-pod4 --image=quay.io/gauravkumar9130/mywebapp -l env=prod
+kubectl get pods --show-labels -o wide
+kubectl label --overwrite pod dev-pod4 env=test
+kubectl get pods --show-labels -o wide
+kubectl get pods --selector env=dev --show-labels
+kubectl get pods --selector env!=dev --show-labels
+kubectl get pods --selector 'env in (test,dev)' --show-labels
+kubectl get pods --selector 'env notin (test,dev)' --show-labels
+kubectl get pods --show-labels -o wide
+kubectl delete pod --all
+kubectl get pods
+
+TASK 05 - REPLICASET
+
+gedit rs.yml
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+ name: rs-web
+spec:
+ replicas: 2
+ selector:
+  matchLabels:
+   app: web
+ template:
+  metadata:
+   labels:
+    app: web
+  spec:
+   containers:
+   - name: mycontainer
+     image: quay.io/gauravkumar9130/nginxdemo
+
+kubectl run existing-pod --image=quay.io/gauravkumar9130/mywebapp -l app=web
+kubectl get pods --show-labels
+kubectl create -f rs.yml
+kubectl get rs
+kubectl get rs rs-web -o yaml
+kubectl describe rs rs-web | less
+kubectl get pods --show-labels
+kubectl run new-pod --image=quay.io/gauravkumar9130/mywebapp -l app=web
+kubectl delete pods existing-pod
+kubectl get pods --show-labels
+kubectl scale rs rs-web --replicas=3
+kubectl get pods --show-labels
+kubectl delete -f rs.yml
+
+TASK 06 - SERVICES
+
+gedit ecom.yml
+
+apiVersion: apps/v1
+kind: ReplicaSet
+metadata:
+ name: ecommerce
+spec:
+ replicas: 2
+ selector:
+  matchLabels:
+   app: ecommerce
+ template:
+  metadata:
+   labels:
+    app: ecommerce
+  spec:
+   containers:
+   - name: abc
+     image: quay.io/gauravkumar9130/mywebapp
+
+kubectl create -f ecom.yml 
+kubectl get pods -o wide --show-labels
+kubectl get svc
+
+PART - A: SERVICE TYPE CLUSTER IP
+
+gedit cip-ecom.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+ name: cip-ecommerce
+spec:
+ type: ClusterIP
+ ports:
+ - targetPort: 80                       ##container port no
+   port: 5000                           ##clusterip port no 
+ selector:
+  app: ecommerce
+
+kubectl create -f cip-ecom.yml 
+kubectl get svc
+kubectl describe svc <svc-name>
+curl <svc-clusterIP>:5000
+kubectl delete -f cip-ecom.yml 
+kubectl get svc
+
+PART - B: SERVICE TYPE NODEPORT
+
+gedit nodep.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+ name: ecommerce-outside-app
+spec:
+ type: NodePort
+ ports:
+ - targetPort: 80           ##container port no
+   port: 80                     ##cluster ip port
+   nodePort: 30003     ####range between 30000-32767 only allowed
+ selector:
+  app: ecommerce
+
+kubectl create -f nodep.yml 
+kubectl get svc
+kubectl get pods -o wide
+kubectl get nodes -o wide
+curl <node-IP>:30003
+Note - open tab in web browser and type <node-IP>:30003
+kubectl delete -f nodep.yml 
+kubectl get svc
+
+PART - C: SERVICE TYPE LOAD BALANCE
+
+gedit lb.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+ name: lb-ecommerce
+spec:
+ type: LoadBalancer
+ ports:
+ - targetPort: 80
+   port: 80
+ selector:
+  app: ecommerce
+
+kubectl create -f lb.yml 
+kubectl get svc
+Note - Open a new tab in chrome browser and access the Load Balancer public IP
+kubectl delete -f lb.yml
+kubectl delete -f ecom.yml 
+kubectl get svc
+kubectl get rs
+
+ TASK 07 - DAEMONSET
+
+gedit ds.yml
+
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+ name: myds
+spec:
+ selector:
+  matchLabels:
+   app: nginx
+ template:
+  metadata:
+   labels:
+    app: nginx
+  spec:
+   containers:
+   - name: abc
+     image: quay.io/gauravkumar9130/nginxdemo
+
+kubectl create -f ds.yml 
+kubectl get ds
+kubectl get pods -o wide
+kubectl delete pod <pod-name>
+kubectl get pods -o wide
+kubectl describe node master | grep -i taint
+kubectl taint nodes master node-role.kubernetes.io/control-plane:NoSchedule-
+kubectl describe node master | grep -i taint
+kubectl get pods -o wide
+kubectl delete -f ds.yml 
+kubectl get ds
+kubectl get ds -n kube-system
+kubectl taint nodes master node-role.kubernetes.io/control-plane:NoSchedule
+kubectl describe node master | grep -i taint
+
+TASK8 - SCHEDULING
+
+PART - A: MANUAL
+
+kubectl get nodes -o wide
+gedit manual.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: my-custom-pod
+spec:
+ containers:
+ - name: abc
+   image: quay.io/gauravkumar9130/nginxdemo
+ nodeName: node1
+
+kubectl create -f manual.yml 
+kubectl get pods -o wide
+kubectl delete pods my-custom-pod
+
+ON NODE1
+systemctl stop kubelet.service 
+systemctl status kubelet.service
+
+ON MASTER
+kubectl get nodes -o wide
+kubectl create -f manual.yml 
+kubectl get pods -o wide
+
+ON NODE1
+systemctl start kubelet.service 
+systemctl status kubelet.service 
+
+ON MASTER
+kubectl get nodes -o wide
+kubectl get pods -o wide
+kubectl delete -f manual.yml 
+kubectl get pods -o wide
+
+PART - B: TAINT AND TOLERATION
+
+ON MASTER
+kubectl get nodes -o wide
+kubectl create -f manual.yml 
+kubectl describe node <node name> | grep -i taint
+NOTE - execute above comand for all nodes of the cluster
+kubectl taint nodes <node name> app=blue:NoSchedule
+kubectl describe node <node name> | grep -i taint
+gedit toleration.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: mypod
+spec:
+ containers:
+ - name: mycontainer
+   image: quay.io/gauravkumar9130/nginxdemo
+ tolerations:
+ - key: "app"
+   operator: "Equal"
+   value: "blue"
+   effect: "NoSchedule"
+
+kubectl create -f toleration.yml 
+kubectl get pods -o wide
+kubectl run dev-pod --image=quay.io/gauravkumar9130/mywebapp
+kubectl get pods -o wide
+kubectl delete pods dev-pod
+kubectl get pods -o wide
+
+ON NODE2
+systemctl stop kubelet.service 
+systemctl status kubelet.service
+
+ON MASTER
+kubectl get nodes -o wide
+kubectl run dev-pod --image=quay.io/gauravkumar9130/mywebapp
+kubectl get pods -o wide
+
+ON NODE2
+systemctl start kubelet.service 
+systemctl status kubelet.service
+
+ON MASTER
+kubectl get pods -o wide
+kubectl taint nodes node2 app=blue:NoExecute
+kubectl describe node node2 | grep -i taint
+kubectl get pods -o wide
+kubectl delete pods --all
+kubectl taint nodes <node name> app-
+NOTE - execute  above command on NODE1 and NODE2
+kubectl describe node <node name> | grep -i taint
+NOTE - execute  above command on NODE1 and NODE2
+
+PART - C: NODE SELECTOR
+
+kubectl get nodes -o wide
+kubectl label node <node name> size=large
+kubectl get nodes --show-labels | grep -i size
+
+gedit selector.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: newpod
+spec:
+ containers:
+ - name: newcontainer
+   image: quay.io/gauravkumar9130/nginxdemo
+ nodeSelector:
+  size: large
+
+kubectl create -f selector.yml
+kubectl get pods -o wide
+kubectl delete -f selector.yml
+kubectl label node <nodename> size-
+kubectl describe node <node name> | grep -i size
+
+PART - D: NODE AFFINITY
+
+kubectl get nodes -o wide
+kubectl label node <node1 name> size=large
+kubectl describe node <node1 name> | grep -i size
+
+gedit affinity.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: mypod
+spec:
+ containers:
+ - name: abc
+   image: quay.io/gauravkumar9130/nginxdemo
+ affinity:
+  nodeAffinity:
+   requiredDuringSchedulingIgnoredDuringExecution:
+    nodeSelectorTerms:
+    - matchExpressions:
+       - key: size
+         operator: In
+         values:
+         - large
+
+kubectl create -f affinity.yml
+kubectl get pods -o wide
+kubectl delete -f affinity.yml
+
+ON NODE1
+systemctl stop kubelet.service 
+systemctl status kubelet.service
+
+ON MASTER
+kubectl create -f affinity.yml
+kubectl get pods -o wide
+
+ON NODE1
+systemctl start kubelet.service 
+systemctl status kubelet.service
+
+ON MASTER
+kubectl get pods -o wide
+kubectl delete -f affinity.yml
+kubectl label node <node1-name> size-
+kubectl describe node <node1 name> | grep -i size
+
+gedit affinity2.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: mypod
+spec:  
+ containers:
+ - name: abc
+   image: quay.io/gauravkumar9130/nginxdemo
+ affinity:
+  nodeAffinity:
+   preferredDuringSchedulingIgnoredDuringExecution:
+   - weight: 1
+     preference:
+      matchExpressions:
+      - key: size
+        operator: In
+        values:
+        - large
+
+kubectl create -f affinity2.yml
+kubectl get pods -o wide
+NOTE - pods will get created on any of the nodes
+kubectl delete -f affinity2.yml
+kubectl label node <node1-name> size=large
+kubectl describe node <node1 name> | grep -i size
+kubectl create -f affinity2.yml
+kubectl get pods -o wide
+NOTE - pods will get created on node1
+kubectl delete -f affinity2.yml
+
+ON NODE1
+systemctl stop kubelet.service 
+systemctl status kubelet.service
+
+ON MASTER
+kubectl get nodes
+NOTE - do not execute below command till the time you see node1 status as NOT READY
+kubectl create -f affinity2.yml
+kubectl get pods -o wide
+NOTE - pods will get created on node2
+kubectl delete -f affinity2.yml
+kubectl label node <node1-name> size-
+kubectl describe node <node1 name> | grep -i size
+
+ON NODE1
+systemctl start kubelet.service 
+systemctl status kubelet.service
+
+
+TASK9 - DEPLOYMENT
+
+PART - A: ROLLING UPDATE
+
+gedit dep.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: myapp
+spec:
+ replicas: 2
+ selector:
+  matchLabels:
+   app: myapp
+ template:
+  metadata:
+   labels:
+    app: myapp
+  spec:
+   containers:
+   - name: c1
+     image: quay.io/gauravkumar9130/production:v1
+
+kubectl create -f dep.yml 
+kubectl get deployment
+kubectl describe deployment myapp | less
+kubectl get rs
+kubectl get pods -o wide
+kubectl expose deployment myapp --target-port=80 --port=80 --type=LoadBalancer
+kubectl get svc
+kubectl set image deployment myapp c1=quay.io/gauravkumar9130/production:v2 --record
+kubectl rollout history deployment myapp
+kubectl set image deployment myapp c1=quay.io/gauravkumar9130/production:v3 --record
+kubectl rollout history deployment myapp
+kubectl rollout undo deployment myapp
+kubectl rollout history deployment myapp
+kubectl rollout undo deployment myapp
+kubectl rollout undo deployment myapp --to-revision=1
+kubectl delete -f dep.yml 
+kubectl delete svc myapp
+
+PART - B: BLUE GREEN
+
+gedit blue.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: blue-deployment
+spec:
+ replicas: 2
+ selector:
+  matchLabels:
+    app: nginx 
+    version: blue                                ##it can be anything
+ template:
+  metadata:
+   labels:
+     app: nginx
+     version: blue
+  spec:
+    containers:
+        - name: abc
+          image: quay.io/gauravkumar9130/production:v1
+          
+gedit bgsvc.yml
+
+apiVersion: v1
+kind: Service
+metadata:
+ name: bgsvc
+spec:
+ type: LoadBalancer
+ ports:
+ - port: 80
+   targetPort: 80
+ selector:
+  version: blue
+
+kubectl create -f blue.yml 
+kubectl create -f bgsvc.yml 
+
+Note - Open new tab in web browser and paste the load balancer IP address
+  
+gedit green.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+ name: green-deployment
+spec:
+ replicas: 2
+ selector:
+  matchLabels:
+    app: nginx 
+    version: green                                ##it can be anything
+ template:
+  metadata:
+   labels:
+     app: nginx 
+     version: green
+  spec:
+    containers:
+        - name: abc
+          image: quay.io/gauravkumar9130/production:v2  
+
+ kubectl create -f green.yml
+ kubectl edit svc bgsvc
+ Note - change under selector version: green
+ Note - refresh the web browser tab from where you access application earlier
+ kubectl delete -f green.yml
+ kubectl delete -f blue.yml
+ kubectl delete -f bgsvc.yml
+      
+ TASK 10 - ENVIRONMENT VARIABLES
+
+PART - A: PLAIN KEY
+
+gedit plainenv.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: plain
+spec:
+ containers:
+ - name: c1
+   image: quay.io/gauravkumar9130/mysql
+   env:
+   - name: MYSQL_ROOT_PASSWORD
+     value: myroot
+   - name: MYSQL_USER
+     value: sam
+   - name: MYSQL_PASSWORD
+     value: sam12345
+
+kubectl create -f plainenv.yml 
+kubectl exec -it plain -- bash
+env
+exit
+kubectl delete -f plainenv.yml 
+
+PART - B: CONFIG MAP
+
+kubectl create cm conf --from-literal=MYSQL_ROOT_PASSWORD=root1234 --from-literal=MYSQL_USER=sam --from-literal=MYSQL_PASSWORD=sam12345
+kubectl get cm
+kubectl describe cm conf | less
+
+gedit configmapenv.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: cm
+spec:
+ containers:
+ - name: c1
+   image: quay.io/gauravkumar9130/mysql
+   envFrom:
+   - configMapRef:
+       name: conf
+
+kubectl create -f configmapenv.yml 
+kubectl exec -it cm -- bash
+env
+exit
+kubectl delete -f configmapenv.yml 
+kubectl delete cm conf
+
+PART - C: SECRET
+
+kubectl create secret generic sec --from-literal=MYSQL_ROOT_PASSWORD=root1234 --from-literal=MYSQL_USER=sam --from-literal=MYSQL_PASSWORD=sam12345
+kubectl get secret
+kubectl describe secret sec
+
+gedit secevn.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: sec
+spec:
+ containers:
+ - name: c1
+   image: quay.io/gauravkumar9130/mysql
+   envFrom:
+   - secretRef:
+       name: sec
+
+kubectl create -f secevn.yml 
+kubectl exec -it sec -- bash
+env
+exit
+kubectl delete -f secevn.yml 
+kubectl delete secret sec
+
+TASK11 - STORAGE
+
+PART - A: EMPTYDIR
+
+gedit emptydir.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: mypod
+spec:
+ volumes:
+ - name: cache
+   emptyDir: {}
+ containers:
+ - name: c1
+   image: quay.io/gauravkumar9130/nginx
+   volumeMounts:
+   - name: cache
+     mountPath: /mydata
+
+kubectl create -f emptydir.yml 
+kubectl get pods -o wide
+kubectl exec -it mypod -- sh
+pwd
+ls
+cd mydata
+echo "Hello, I am eks user" > test
+ls
+exit
+
+ON NODEX TAB
+find / -name test
+cd /var/lib/kubelet/pods/<string>/volumes/kubernetes.io~empty-dir/cache
+ls
+cd
+
+ON MASTER TAB
+kubectl delete -f emptydir.yml
+kubectl get pods -o wide
+
+PART - B: PV AND PVC
+
+kubectl get pv
+kubectl get pvc
+gedit pvol.yml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: myvol
+spec:
+ storageClassName: hdd
+ accessModes:
+ - ReadWriteMany
+ capacity:
+  storage: "3Gi"
+ hostPath:
+   path: "/insidenode"
+
+kubectl create -f pvol.yml 
+kubectl get pv
+gedit pvclaim.yml
+
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+ name: myclaim
+spec:
+ storageClassName: hdd
+ accessModes:
+ - ReadWriteMany
+ resources:
+  requests:
+   storage: "2Gi"
+
+kubectl create -f pvclaim.yml 
+kubectl get pvc
+gedit podpv.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: mypod
+spec:
+ volumes:
+ - name: myvol
+   persistentVolumeClaim:
+    claimName: myclaim
+ containers:
+ - name: c1
+   image: quay.io/gauravkumar9130/nginx
+   volumeMounts:
+   - name: myvol
+     mountPath: /usr/share/nginx/html
+
+kubectl create -f podpv.yml
+kubectl get pods -o wide 
+kubectl exec -it mypod -- sh
+pwd
+cd usr/share/nginx/html
+echo "Hello, I am eks user" > test
+ls
+exit
+
+ON NODEX TAB
+cd /insidenode
+cat test
+
+ON MASTER TAB
+kubectl delete -f podpv.yml 
+
+ON WORKER2 TAB
+ls
+
+ON MASTER TAB
+kubectl delete -f pvclaim.yml
+kubectl delete -f pvol.yml
+
+TASK12 - QUOTA AND RESOURCE LIMIT
+
+PART - A: POD QUOTA
+
+kubectl create namespace quota-pod-example
+kubectl get ns
+gedit quota.yml
+
+apiVersion: v1
+kind: ResourceQuota
+metadata:
+  name: pod-demo
+spec:
+  hard:
+    pods: "2"
+
+kubectl apply -f quota.yml --namespace=quota-pod-example
+kubectl get resourcequota pod-demo --namespace=quota-pod-example --output=yaml
+kubectl edit resourcequota pod-demo --namespace=quota-pod-example
+gedit deploy.yml
+
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: pod-quota-demo
+spec:
+  selector:
+    matchLabels:
+      purpose: quota-demo
+  replicas: 3
+  template:
+    metadata:
+      labels:
+        purpose: quota-demo
+    spec:
+      containers:
+      - name: pod-quota-demo
+        image: nginx
+
+kubectl apply -f deploy.yml --namespace=quota-pod-example
+kubectl get deploy -n quota-pod-example
+kubectl get deployment pod-quota-demo --namespace=quota-pod-example --output=yaml
+kubectl delete namespace quota-pod-example
+
+PART - B:  POD RESOURCE LIMIT
+
+gedit dev-pod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: dev-pod
+spec:
+ containers:
+ - name: abc
+   image: quay.io/gauravkumar9130/nginxdemo
+   resources:
+    requests:
+         cpu: "1"
+         memory: "1Gi"
+    limits:
+         cpu: "2"
+         memory: "2Gi"
+
+kubectl create -f dev-pod.yml
+kubectl get pods --output=yaml
+kubectl delete -f dev-pod.yml
+
+TASK13 - SERVICE A/C AND RBAC
+
+PART - A:  USER A/C RBAC
+
+kubectl create namespace whizlabs-rbac
+kubectl get ns
+kubectl get sa -n whizlabs-rbac
+kubectl create serviceaccount whizlabs-admin -n whizlabs-rbac
+kubectl get sa -n whizlabs-rbac
+kubectl create rolebinding whizlabs-binding --clusterrole=edit --user=whizlabs-admin -n whizlabs-rbac
+kubectl get rolebinding -n whizlabs-rbac
+kubectl delete namespace whizlabs-rbac
+kubectl get ns
+
+PART - B:  MANAGING SA AND CLUSTER ROLE
+
+gedit lab-user.yaml
+
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+ name: lab-user
+
+kubectl apply -f lab-user.yaml 
+kubectl get sa
+gedit lab-cluster-role.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+ name: lab-cluster-role
+rules:
+- apiGroups: [""]
+  resources: ["pods", "deployments"]
+  verbs: ["get", "list"]
+
+kubectl apply -f lab-cluster-role.yaml
+kubectl get ClusterRole | grep lab
+gedit lab-role-binding.yaml
+
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+ name: lab-cluster-role-binding
+subjects:
+- kind: ServiceAccount
+  name: lab-user
+  namespace: default
+roleRef:
+ kind: ClusterRole
+ name: lab-cluster-role
+ apiGroup: rbac.authorization.k8s.io
+
+kubectl apply -f lab-role-binding.yaml 
+kubectl get ClusterRoleBinding | grep lab
+kubectl run defaultsa-pod --image=quay.io/redhattraining/hello-world-nginx
+kubectl exec -it defaultsa-pod -- bash
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+echo $TOKEN
+curl -H "Authorization: Bearer $TOKEN" https://IP-ADD-MASTER:6443/api/v1/namespaces/default/pods/ --insecure
+exit
+
+gedit pod.yaml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: lab-sa-pod
+spec:
+ containers:
+ - name: abc
+   image: quay.io/redhattraining/hello-world-nginx
+ serviceAccountName: lab-user
+
+kubectl create -f pod.yaml
+kubectl get pods
+kubectl exec -it lab-sa-pod -- bash
+TOKEN=$(cat /var/run/secrets/kubernetes.io/serviceaccount/token)
+curl -H "Authorization: Bearer $TOKEN" https://IP-ADD-MASTER:6443/api/v1/namespaces/default/pods/ --insecure
+exit
+kubectl delete sa lab-user
+kubectl get sa
+kubectl delete pods --all
+less /root/.kube/config
+kubectl auth can-i list pods
+kubectl auth can-i get deploy
+
+TASK14 - LOGGING
+
+PART A - BUILTIN LOGGING
+
+kubectl get nodes
+gedit logging.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: mypod
+spec:
+ containers:
+ - name: c1
+   image: quay.io/gauravkumar9130/mywebapp
+
+kubectl create -f logging.yml 
+kubectl get pods -o wide
+curl http://<mypod-ip>
+kubectl logs mypod
+kubectl logs mypod -c c1
+kubectl delete pods mypod
+
+PART B - LOGGING WITH ELASTICSEARCH
+
+cd /root/mylabs
+git clone https://github.com/gauravkumar9130/kube-elk
+ls
+cd kube-elk/
+ls
+cat Instructions 
+kubectl create -f 1-elastic.yml
+NOTE - WAIT FOR 1 MIN
+kubectl get pods
+kubectl create -f 2-kibana.yml
+kubectl get pods
+kubectl create -f 3-filebeat.ym
+kubectl get pods -o wide -n kube-system | grep filebeat
+kubectl get pods
+kubectl get svc
+
+In web browser copy KIBANA PUBLIC IP:5601
+
+Click on "Explore on my own" button
+Then to create index pattern follow
+- left side click on menu --> stack management --> index pattern --> create index pattern --> name: filebeat* --> timestamp: @timestamp
+- click create index pattern button
+- click Discover in main menu
+
+kubectl delete -f 3-filebeat.yml
+kubectl delete -f 2-kibana.yml
+kubectl delete -f 1-elastic.yml
+
+TASK15 - INGRESS
+ 
+git clone https://github.com/kubernetes/ingress-nginx
+cd ingress-nginx/deploy/static/provider/cloud
+kubectl create -f deploy.yaml
+kubectl get pods -n ingress-nginx
+kubectl get svc -n ingress-nginx
+kubectl create deployment hotel --image=quay.io/gauravkumar9130/hotel --replicas=2
+kubectl create deployment tea --image=quay.io/gauravkumar9130/tea --replicas=2
+kubectl create deployment coffee --image=quay.io/gauravkumar9130/coffee --replicas=2
+kubectl get pods
+kubectl expose deployment hotel --target-port=80 --port=80 
+kubectl expose deployment tea --target-port=80 --port=80 
+kubectl expose deployment coffee --target-port=80 --port=80 
+kubectl get deployment
+kubectl get svc
+cd
+cd mylabs
+gedit ingress.yml
+
+apiVersion: networking.k8s.io/v1
+kind: Ingress
+metadata:
+ name: hotel-app
+ annotations:
+  kubernetes.io/ingress.class: nginx
+spec:
+ rules:
+ - http:
+    paths:
+    - path: /hotel
+      pathType: Prefix
+      backend:
+       service:
+         name: hotel
+         port:
+          number: 80
+    - path: /tea
+      pathType: Prefix
+      backend:
+       service:
+         name: tea
+         port:
+          number: 80
+    - path: /coffee
+      pathType: Prefix
+      backend:
+       service:
+         name: coffee
+         port:
+          number: 80
+
+kubectl create -f ingress.yml 
+kubectl get ingress
+kubectl get svc -n ingress-nginx
+kubectl delete svc hotel
+kubectl delete svc tea
+kubectl delete svc coffee
+kubectl get deployment
+kubectl delete deployment hotel
+kubectl delete deployment tea
+kubectl delete deployment coffee
+kubectl get pods
+cd ingress-nginx/deploy/static/provider/cloud
+kubectl delete -f deploy.yaml
+cd
+
+TASK16 - SECURITY CONTEXT AND NETWORK POLICY
+
+gedit webpod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: webpod
+ labels:
+  app: web
+spec:
+ containers:
+ - name: con1
+   image: quay.io/gauravkumar9130/nginxdemo
+
+kubectl create -f webpod.yml
+
+gedit testpod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: testpod
+ labels:
+  app: test
+spec:
+ containers:
+ - name: con1
+   image: quay.io/gauravkumar9130/nginxdemo
+
+kubectl create -f testpod.yml
+kubectl get pods -o wide --show-labels
+kubectl exec -it webpod -- sh
+ping -c3 <ip-test-pod>
+exit
+kubectl exec -it testpod -- sh
+ping -c3 <ip-web-pod>
+exit
+kubectl delete pods --all
+
+NOTE - edit webpod.yml as below
+
+gedit webpod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: webpod
+ labels:
+  app: web
+spec:
+ containers:
+ - name: con1
+   image: quay.io/gauravkumar9130/nginxdemo
+   securityContext:
+      capabilities:
+         add: ["NET_RAW"]
+
+kubectl create -f webpod.yml
+
+NOTE - edit testpod.yml as below
+
+gedit testpod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: testpod
+ labels:
+  app: test
+spec:
+ containers:
+ - name: con1
+   image: quay.io/gauravkumar9130/nginxdemo
+   securityContext:
+      capabilities:
+         add: ["NET_RAW"]
+
+kubectl create -f testpod.yml
+
+gedit dbpod.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: dbpod
+ labels:
+  app: db
+spec:
+ containers:
+ - name: con1
+   image: quay.io/gauravkumar9130/nginxdemo
+   securityContext:
+      capabilities:
+         add: ["NET_RAW"]
+
+kubectl create -f dbpod.yml
+kubectl get pods -o wide --show-labels
+kubectl exec -it webpod -- sh
+ping -c3 <ip-test-pod>
+ping -c3 <ip-db-pod>
+exit
+kubectl exec -it testpod -- sh
+ping -c3 <ip-web-pod>
+ping -c3 <ip-db-pod>
+exit
+kubectl get netpol
+
+Network policy to deny all incoming traffic to all pods
+
+gedit deny.yml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+ name: deny-policy
+spec:
+ podSelector:
+  matchLabels: {}
+ policyTypes:
+ - Ingress
+
+kubectl create -f deny.yml 
+kubectl get netpol
+kubectl get pods -o wide
+kubectl exec -it webpod -- sh
+ping -c3 ip-test-pod
+ping -c3 ip-db-pod
+exit
+kubectl exec -it testpod -- sh
+ping -c3 ip-web-pod
+ping -c3 ip-db-pod
+exit
+kubectl exec -it dbpod -- sh
+ping -c3 ip-web-pod
+ping -c3 ip-test-pod
+exit
+
+Network policy to allow incoming traffic from webpod to dbpod
+
+kubectl get pods --show-labels
+gedit db-web-netpol.yml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+ name: db-policy
+spec:
+ podSelector:
+  matchLabels:
+    app: db
+ policyTypes:
+ - Ingress
+ ingress:
+ - from:
+   - podSelector:
+      matchLabels:
+       app: web
+
+kubectl create -f db-web-netpol.yml 
+kubectl exec -it webpod -- sh
+ping -c3 ip-db-pod
+ping -c3 ip-test-pod
+exit
+
+Network policy to allow incoming traffic from dbpod to webpod
+
+gedit web-db-netpol.yml
+
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+ name: web-policy
+spec:
+ podSelector:
+  matchLabels:
+    app: web
+ policyTypes:
+ - Ingress
+ ingress:
+ - from:
+   - podSelector:
+      matchLabels:
+       app: db
+
+kubectl create -f web-db-netpol.yml 
+kubectl get pods -o wide
+kubectl exec -it dbpod -- sh
+ping -c3 ip-web-pod
+ping -c3 ip-test-pod
+exit
+kubectl delete -f web-db-netpol.yml 
+kubectl delete -f db-web-netpol.yml 
+kubectl delete -f deny.yml
+kubectl delete pods --all
+kubectl get netpol
+
+TASK17 - HELM
+
+PART - A: HELM-CHART
+
+curl -fsSL -o get_helm.sh https://raw.githubusercontent.com/helm/helm/main/scripts/get-helm-3
+chmod 700 get_helm.sh
+./get_helm.sh
+cp /usr/local/bin/helm /bin/
+helm repo add bitnami https://charts.bitnami.com/bitnami
+helm repo list
+helm repo update
+helm search repo bitnami | less
+helm install apacheapp bitnami/apache
+kubectl get pods
+kubectl get svc
+helm list
+helm uninstall apacheapp
+helm repo remove bitnami
+helm repo list
+
+PART - B: CUSTOM HELMCHART
+
+mkdir charts
+cd charts
+helm create mycharts
+ls
+cd mycharts
+ls
+less Chart.yaml
+
+cd templates
+ls
+cp deployment.yaml /root/deploymentbk.yaml 
+
+vim deployment.yaml
+
+:set nu
+line 37: image: "{{ .Values.image.repository }}"
+delete line 43 - 46 [remove readiness and liveness block]
+
+Note - The deployment.yaml file should have above changes
+
+cd ..
+cp values.yaml /root/valuesbk.yaml
+
+vim values.yaml
+
+line 5 - replicaCount: 2
+line 8 - repository: quay.io/gauravkumar9130/production:v1
+line 43 - type: LoadBalancer
+
+Note - The values.yaml file should have above changes
+
+cd ..
+helm install myapp mycharts
+kubectl get pods
+kubectl get svc
+helm uninstall myapp
+
+TASK18 - STATIC
+
+ON MASTER
+cd /etc/kubernetes/manifests
+ls
+kubectl get pods
+
+ON NODE1
+
+exit
+ssh -X root@node1
+cd /etc/kubernetes/manifests
+pwd
+gedit test.yml
+
+apiVersion: v1
+kind: Pod
+metadata:
+ name: test
+spec:
+ containers:
+ - name: container1
+   image: quay.io/gauravkumar9130/mywebapp
+
+ON MASTER
+kubectl get pods
+kubectl delete pod <pod-name>
+kubectl get pods
+
+ON NODE1
+rm -f test.yml
+ls
+
+ON MASTER
+kubectl get pods
+
+TASK19 - JOBS AND CRONJOB
+  
+gedit cronjob.yml
+
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cronjob
+spec:
+  schedule: "*/1 * * * *"
+  jobTemplate:
+    spec:
+      template:
+        spec:
+          containers:
+          - name: pod
+            image: quay.io/gauravkumar9130/busybox
+            command:
+            - /bin/sh
+            - -c
+            - date; echo hello from the Kubernetes cluster
+          restartPolicy: OnFailure
+
+kubectl create -f cronjob.yml 
+kubectl get cronjobs
+kubectl get pods
+kubectl logs pod-name
+kubectl get job -w
+kubectl delete -f cronjob.yml
+
+TASK15 - STATEFULSETS
+
+PART A - STATEFULSETS
+
+kubectl create -f rs.yml 
+kubectl get pods -o wide
+kubectl delete pods <pod-name>
+kubectl get pods -o wide
+Note - RS is incapable of maintaining name and IP add persistence for a POD
+kubectl delete -f rs.yml
+  
+gedit sf.yml
+  
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: myweb
+spec:
+ serviceName: websvc
+ selector:
+  matchLabels:
+   app: web
+ replicas: 3
+ template:
+  metadata:
+   labels:
+    app: web
+  spec:
+   containers:
+   - name: abc
+     image: quay.io/gauravkumar9130/nginxdemo
+  
+kubectl create -f sf.yml 
+kubectl get pods -o wide
+kubectl delete pod myweb-0
+kubectl get pods
+kubectl scale statefulset myweb --replicas=4
+kubectl get pods -o wide
+kubectl scale statefulset myweb --replicas=3
+kubectl get pods -o wide
+
+gedit hdsvc.yml
+  
+apiVersion: v1
+kind: Service
+metadata:
+ name: websvc
+spec:
+ ports:
+ - targetPort: 80
+   port: 80
+ selector:
+  app: web
+ clusterIP: None
+  
+kubectl create -f hdsvc.yml 
+kubectl get svc
+kubectl rollout restart deployment coredns -n kube-system
+
+#myweb-2.websvc.default.svc.cluster.local ------------------------------ PLEASE DO EXECUTE
+
+kubectl run test-dns -it --rm --image=centos
+curl http://myweb-0.websvc.default.svc.cluster.local
+curl http://myweb-1.websvc.default.svc.cluster.local
+exit
+kubectl get pods -o wide
+kubectl delete statefulset myweb
+ 
+PART B - STATEFULSETS WITH STORAGE
+
+cp pvol.yml pvol2.yml
+cp pvol.yml pvol3.yml
+
+gedit pvol.yml
+
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+ name: pv1
+spec:
+ storageClassName: hdd
+ accessModes:
+ - ReadWriteOnce
+ capacity:
+  storage: "1Gi"
+ hostPath:
+   path: "/insidenode"
+
+Note - make change of name in pvol2.yml and pvol3.yml accordingly
+
+kubectl create -f pvol.yml
+kubectl create -f pvol2.yml
+kubectl create -f pvol3.yml
+
+kubectl get pv
+
+gedit sfst.yml
+  
+apiVersion: apps/v1
+kind: StatefulSet
+metadata:
+ name: myweb-statefulset
+spec:
+ serviceName: websvc
+ replicas: 3
+ selector:
+  matchLabels:
+   app: web
+ template:
+  metadata:
+   labels:
+    app: web
+  spec:
+   containers:
+   - name: abc
+     image: quay.io/gauravkumar9130/nginxdemo
+     volumeMounts:
+     - mountPath: /mydata
+       name: data-volume
+ volumeClaimTemplates:
+ - metadata:
+    name: data-volume
+   spec:
+    accessModes:
+     - ReadWriteOnce
+    resources:
+     requests:
+       storage: 500Mi
+   
+kubectl create -f sfst.yml 
+kubectl get pods -o wide
+kubectl get pvc
+kubectl get pv
+kubectl delete -f sfst.yml
+kubectl delete -f hdsvc.yml
+kubectl delete pvc --all
+kubectl delete pv --all
+
